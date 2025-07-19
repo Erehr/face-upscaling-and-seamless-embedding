@@ -116,6 +116,9 @@ class FUSEKSampler(FUSEBase):
                     if (x2 - x1) < 32 or (y2 - y1) < 32:
                         continue
 
+                    if (x2 - x1) > face_size or (y2 - y1) > face_size:
+                        continue
+
                     x1 = max(0, x1 - face_padding)
                     y1 = max(0, y1 - face_padding)
                     x2 = min(W, x2 + face_padding)
