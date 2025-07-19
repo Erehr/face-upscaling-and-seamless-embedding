@@ -63,6 +63,12 @@ class FUSEKSampler(FUSEBase):
         force_square, blend_amount, blend_mode, use_sam_mask, face_color_transfer, unique_id,
         mask_optionals=None
     ):
+        if not use_cache:
+            self.clear_cache()
+        elif self.cached_unique_id != unique_id:
+            self.clear_cache()
+            self.cached_unique_id = unique_id
+
         device = comfy.model_management.get_torch_device()
         opts = mask_optionals or {}
         mask_fill_holes = bool(opts.get('mask_fill_holes', True))

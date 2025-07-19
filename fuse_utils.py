@@ -152,6 +152,7 @@ def contract_and_blur_mask(mask_arr, blend_amount):
 class FUSEBase:
     def __init__(self):
         self.cache = {}
+        self.cached_unique_id = None
         self.vae_encode = VAEEncode()
         self.vae_decode = VAEDecode()
         self.yolo_model = None
