@@ -33,7 +33,7 @@ class FUSEKSampler(FUSEBase):
                 "yolo_detector": (load_yolo_face_models_list(), {"tooltip": "Choose the YOLO detector to use for face detection. Must be trained on faces. See: https://github.com/akanametov/yolo-face"}),
                 "sam_segmenter": (load_sam_models_list(), {"tooltip": "Choose the SAM segmentation model to use for face segmentation. See: https://github.com/facebookresearch/segment-anything?tab=readme-ov-file#model-checkpoints"}),
                 "sam_model_type": (["vit_b", "vit_l", "vit_h"], {"default": "vit_b", "tooltip": "SAM model type"}),
-                "face_id": ("INT", {"default": 0, "min": 0, "tooltip": "Index of the face to process in the image (0 is the first face found)."}),
+                "faces_to_process": ("INT", {"default": 1, "min": 1, "max": 10, "tooltip": "Number of faces to process in the image."}),
                 "face_size": ([512, 768, 1024, 1280, 1536], {"default": 512, "tooltip": "The resolution to sample the face crop at."}),
                 "face_padding": ("INT", {"default": 20, "min": 0, "max": MAX_RESOLUTION, "tooltip": "Padding in pixels (int) to pad the face crop with."}),
                 "force_square": ("BOOLEAN", {"default": True, "tooltip": "Force 1:1 square face crops"}),
@@ -59,7 +59,7 @@ class FUSEKSampler(FUSEBase):
     def execute(
         self, model, vae, images, 
         positive, negative, use_cache, seed, steps, cfg, sampler_name, scheduler, denoise,
-        yolo_detector, sam_segmenter, sam_model_type, face_id, face_size, face_padding,
+        yolo_detector, sam_segmenter, sam_model_type, faces_to_process, face_size, face_padding,
         force_square, blend_amount, blend_mode, use_sam_mask, face_color_transfer, unique_id,
         mask_optionals=None
     ):
@@ -104,7 +104,7 @@ class FUSEKSampler(FUSEBase):
                     continue
 
                 boxes = results[0].boxes.xyxy.cpu().numpy().tolist()
-                boxes = sorted(boxes, key=lambda b: (int((b[1] + b[3]) // 2), int((b[0] + b[2]) // 2)))
+                boxes = sorted(boxes, key=lambda b: (b[2] - b[0]) * (b[3] - b[1]), reverse=True)
 
                 crops = []
                 crop_info = []
@@ -159,13 +159,9 @@ class FUSEKSampler(FUSEBase):
             if not crops:
                 continue
 
-            if face_id >= len(crops):
-                idx = -1
-            else:
-                idx = face_id
-
-            crops = [crops[idx]]
-            crop_info = [crop_info[idx]]
+            num_faces = min(len(crops), faces_to_process)
+            crops = crops[:num_faces]
+            crop_info = crop_info[:num_faces]
 
             params_hash = compute_diffusion_hash(seed, steps, cfg, sampler_name, scheduler, denoise)
             model_hash = get_model_identity(model)
